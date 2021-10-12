@@ -11,9 +11,9 @@ import java.util.List;
  */
 public class Player {
 
-	private String name;
-	private Hand hand;
-	private boolean banished;
+	protected String name;
+	protected Hand hand;
+	protected boolean banished;
 	
 	public Player(String playerName) {
 		this.name = playerName;

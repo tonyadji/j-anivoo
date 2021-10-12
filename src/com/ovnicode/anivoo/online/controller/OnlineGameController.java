@@ -1,9 +1,10 @@
 /**
  * 
  */
-package com.ovnicode.anivoo.controller;
+package com.ovnicode.anivoo.online.controller;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import com.ovnicode.anivoo.controller.logic.interfaces.GameLogic;
 import com.ovnicode.anivoo.model.Deck;
@@ -11,38 +12,44 @@ import com.ovnicode.anivoo.model.PlayedCard;
 import com.ovnicode.anivoo.model.Player;
 import com.ovnicode.anivoo.model.PlayingCard;
 import com.ovnicode.anivoo.model.Round;
-import com.ovnicode.anivoo.view.interfaces.GameViewable;
+import com.ovnicode.anivoo.online.model.NetPlayer;
+import com.ovnicode.anivoo.online.model.Table;
+import com.ovnicode.anivoo.online.view.interfaces.OnlineGameViewable;
 
 /**
- * @author tonys
+ * @author ASUS
  *
  */
-
-public class GameController {
+public class OnlineGameController {
 
 	enum GameState {
-		ADDING_PLAYERS, CARDS_DEALT, DISPLAY_WINNER;
+		CONFIRM_GAME_START, CARDS_DEALT, DISPLAY_WINNER;
 	}
 
 	private Deck deck;
-	private GameViewable view;
+	private OnlineGameViewable view;
 	GameLogic gameLogic;
 	private GameState gameState;
 	private Round lastRound;
-	private ArrayList<Player> players;
-	private ArrayList<Round> rounds;
+	private List<NetPlayer> players;
+	private List<Round> rounds;
+	private Table table;
 
-	public GameController(GameViewable view, Deck deck, GameLogic logic) {
-		gameState = GameState.ADDING_PLAYERS;
+	public OnlineGameController(OnlineGameViewable view, Deck deck, GameLogic logic, Table table) {
+		gameState = GameState.CONFIRM_GAME_START;
 		this.players = new ArrayList<>();
 		this.rounds = new ArrayList<>();
 		this.deck = deck;
 		this.gameLogic = logic;
 		this.view = view;
 		this.view.setController(this);
+		this.table = table;
+		this.table.setController(this);
 	}
+	
+	
 
-	public void addPlayer(String playerName) {
+	/*public void addPlayer(String playerName) {
 		if (gameState == GameState.ADDING_PLAYERS) {
 			players.add(new Player(playerName));
 			view.showPlayerName(players.size() - 1, playerName);
@@ -50,13 +57,15 @@ public class GameController {
 				view.promptFullTable();
 			}
 		}
-	}
+	}*/
 
 	public void startGame() {
+		System.out.println("controller start the game");
+		this.players = table.getPlayers();
 		if (gameState != GameState.CARDS_DEALT) {
 			deck.shuffle();
 			int playerIndex = 0;
-			for (Player player : players) {
+			for (NetPlayer player : players) {
 				for (int i = 0; i < 5; i++) {
 					player.addCardToHand(deck.removeTopCard());
 				}
@@ -76,7 +85,7 @@ public class GameController {
 				if (playerIndex == players.size()) {
 					playerIndex = 0;
 				}
-				Player player = players.get(playerIndex);
+				NetPlayer player = players.get(playerIndex);
 				String diplayedPlayerName = i ==0 ? player.getName()+"*" : player.getName();
 				final int cardPlayedIndex = view.promptPlayerWhoHasToPlay(playerIndex, diplayedPlayerName,
 						player.getHand());
@@ -102,7 +111,7 @@ public class GameController {
 
 	public void restartGame() {
 		players.clear();
-		this.gameState = GameState.ADDING_PLAYERS;
+		this.gameState = GameState.CONFIRM_GAME_START;
 	}
 
 	public void exitGame() {
@@ -112,8 +121,14 @@ public class GameController {
 	public void run() {
 		while (true) {
 			switch (gameState) {
-			case ADDING_PLAYERS:
-				view.promptForPlayerName();
+			case CONFIRM_GAME_START:
+				if(table.getPlayers().size()>=2) {
+					table.getExchange().sendMessageTo(table.getPlayers().size()+" player(s) sit... Start the game ? [y/n]",0);
+					String shouldGameStart = table.getExchange().getMessage(table.getPlayers().get(0));
+					if(shouldGameStart.equals("y")) {
+						startGame();
+					}
+				}
 				break;
 			case CARDS_DEALT:
 				view.promptStartPlaying();// prompt for play a card
